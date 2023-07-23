@@ -29,7 +29,8 @@ var DemoConstants = {
 var ChatDemo = /** @class */ (function (_super) {
     __extends(ChatDemo, _super);
     function ChatDemo() {
-        var _this = _super.call(this, Photon.ConnectionProtocol.Ws, photonId, chatVersion) || this;
+				let useHttps = new URLSearchParams(window.location.search).has("https");
+        var _this = _super.call(this, useHttps ? Photon.ConnectionProtocol.Wss : Photon.ConnectionProtocol.Ws, photonId, chatVersion) || this;
         _this.logger = new Exitgames.Common.Logger("Demo:", DemoConstants.LogLevel);
         _this.prevChannelsIds = {};
         Output.log("[i]", "Init", _this.getNameServerAddress(), photonId, chatVersion);
