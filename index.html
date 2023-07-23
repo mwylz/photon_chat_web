@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equestrian Chat</title>
+    <script type="text/javascript" src="https://download.playfab.com/PlayFabClientApi.js"></script>
+		<script type="text/javascript" src="Photon-Javascript_SDK.js"></script>
+		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.12.3/dist/cdn.min.js"></script>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script type="text/javascript" src="app.js"></script>
+		<script>
+		let urlParams = new URLSearchParams(window.location.search);
+		// Config values
+		let titleId = urlParams.get("titleId");
+		let accountId = urlParams.get("masterPlayerId");
+		let customId = urlParams.get("customId");
+		let photonId = urlParams.get("photonId");
+		let chatVersion = urlParams.get("chatVersion");
+		let channels = [
+			"Arabic",
+			"English",
+			"Chinese",
+			"French",
+			"German",
+			"Spanish",
+			"Japanese",
+			"Indonesian",
+			"Korean",
+			"Italian",
+			"Russian",
+			"Thai",
+			"Ranch Parties",
+		];
+		// ---
+		PlayFab.settings.titleId = titleId;
+		
+		let photonToken;
+		let app;
+		
+		document.addEventListener('alpine:init', () => {
+			Alpine.store('app', {
+				state: 'Disconnected',
+				error: false,
+				totalMessagesReceived: 0,
+				messages: [],
+				autoScroll: true,
+				channelsToShow: ["English"],
+			})
+			app = Alpine.store('app')
+			
+			setInterval(scrollToBottom, 250);
+			//addMockMessages();
+			//return;
+			
+			// Start connecting
+			app.state = "Logging in...";
+			PlayFabClientSDK.LoginWithCustomID(loginRequest, onPlayFabLoginResult);
+		});
+
+		function scrollToBottom() {
+			// Hacky way to scroll down to show new messages
+			if (!app.autoScroll) {
+				return;
+			}
+			
+			let scroll = document.getElementById("scroll");
+			scroll.scrollTop = scroll.scrollHeight;
+		}
+		
+		let loginRequest = {
+			TitleId: PlayFab.settings.titleId,
+			CustomId: customId,
+			CreateAccount: false
+		}
+
+		function onPlayFabLoginResult(result, error) {
+			if (result !== null) {
+				onPlayFabLoggedIn();
+			}
+			else {
+				console.log(error);
+				app.error = true;
+				app.state = error;
+			}
+		}
+		
+		function onPlayFabLoggedIn() {
+				console.log("Success!");
+				let request = {
+					PhotonApplicationId: photonId,
+				};
+				app.state = "Getting Photon Token...";
+				PlayFab.ClientApi.GetPhotonAuthenticationToken(request, onGotPhotonAuth);
+		}
+		
+		function onGotPhotonAuth(res) {
+			let token = res.data.PhotonCustomAuthenticationToken;
+			photonToken = token;
+			console.log(token);
+			app.state = "Connecting to chat...";
+			startChat();
+		}
+		
+		function onReceivedMessage(channel, msg) {
+			let content = JSON.parse(msg.content);
+			if (content.msg == undefined) {
+				// Probably not a chat message
+				console.log(msg);
+				return;
+			}
+			
+			/**
+			msg
+			{
+				"sender": "50A72A170F4DA875",
+				"content": "{\"I\":8,\"P\":\"50A72A170F4DA875\",\"M\":\"0048\",\"D\":\"Madison2508\",\"S\":true,\"X\":[\"\",\"0\"],\"T\":85803,\"msg\":\"hi\"}"
+			}
+			**/
+			
+			console.log(msg);
+			let message = {
+				id: app.totalMessagesReceived,
+				channel: channel,
+				timestampUTC: getDateFromSecondsPassed(content.T), // Don't know why this is seconds and not minutes
+				senderId: msg.sender,
+				senderPlayerId: content.D,
+				msgText: content.msg,
+				toString() {
+					return this.channel + ": " + this.senderPlayerId + ": " + this.msgText;
+				}
+			};
+			
+			app.totalMessagesReceived++;
+			app.messages.push(message);
+		}
+		
+		function addMockMessages() {
+			for (let i = 0; i < 5; i++) {
+				let msg = {
+					id: i,
+					channel: "English",
+					senderId: "23904",
+					senderPlayerId: "Player Name123",
+					msgText: "Message contents here",
+				};
+				app.messages.push(msg);
+			}
+		}
+		
+		function openPlayFabAccount(accountId) {
+			let link = "https://developer.playfab.com/en-us/r/t/" + titleId + "/players/" + accountId + "/overview"
+			window.open(link);
+		}
+		
+		function getDefaultPlayerNameColor(playerID) {
+			let str = playerID;
+			let hash = 0;
+			for (let i = 0; i < str.length; i++) {
+				hash = str.charCodeAt(i) + ((hash << 5) - hash);
+			}
+
+			let colour = "";
+			let minimumRGB = 80;
+			for (let i = 0; i < 3; i++) {
+				let value = (hash >> (i * 8)) & 0xFF;
+				if (value < minimumRGB) value = minimumRGB;
+				let colorCode = ("00" + value.toString(16));
+				colorCode = colorCode.substring(colorCode.length - 2);
+				colour += colorCode;
+			}
+
+			return colour;
+		}
+		
+		function getDateFromSecondsPassed(secondsPassed) {
+			const now = new Date();
+			const midnight = new Date(now);
+			midnight.setUTCHours(0, 0, 0, 0); // Set the time to midnight (00:00:00.000) in UTC
+			
+			const millisecondsToAdd = secondsPassed * 1000;
+			const resultDate = new Date(midnight.getTime() + millisecondsToAdd);
+
+			return resultDate;
+		}
+
+		function convertUTCtoLocal(utcDate) {
+			const localDate = new Date(utcDate);
+			return localDate;
+			//return localDate.toLocaleString(); // Converts the date to local timezone using user's locale settings
+		}
+		
+		function formatDate(date) {
+			return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+		}
+		
+		function selectAllChannels() {
+			app.channelsToShow.length = 0;
+			channels.forEach(x => app.channelsToShow.push(x));
+		}
+		
+		function totalMessagesInChannel(channel) {
+			return app.messages.reduce((total, msg) => {
+				let x = msg.channel == channel ? 1 : 0;
+				return total + x;
+			}, 0);
+		}
+		</script>
+</head>
+<body class="bg-zinc-900 text-gray-300">
+<div x-data="$store.app" class="h-screen flex flex-col p-4">
+	<div>
+		<p :class="error ? 'text-red-500' : state == 'Connected!' ? 'text-green-300' : ''" x-text="state"></p>
+		<input type="checkbox" x-model="autoScroll"> Autoscroll</input>
+		<br/>
+		<button class="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-0 px-2 rounded" x-on:click="selectAllChannels()">Select All</button>
+		<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-0 px-2 rounded" x-on:click="channelsToShow.length = 0">Select None</button>
+		<div>
+			<template x-for="channel in channels" :key="channels.indexOf(channel)">
+			<div class="inline pr-3">
+				<input type="checkbox" :value="channel" x-model="channelsToShow">
+				<span :class="totalMessagesInChannel(channel) == 0 && 'text-gray-500'" x-text="channel + ' (' + totalMessagesInChannel(channel) + ')'"></span>
+				</input>
+			</div>
+			</template>
+		</div>
+	</div>
+	<div id="scroll" class="grow overflow-y-scroll border-solid border-2 border-gray-500 mt-4">
+		<template x-for="msg in messages.filter(x => channelsToShow.includes(x.channel))" :key="msg.id">
+			<div class="hover:bg-zinc-700">
+				<span x-text="'[' + msg.channel + ']'"></span>
+				<span x-text="formatDate(msg.timestampUTC)"></span>
+				<span x-text="msg.senderPlayerId + ':'" x-on:click="openPlayFabAccount(msg.senderId)" :style="'color: #' + getDefaultPlayerNameColor(msg.senderPlayerId)" class="cursor-pointer"></span>
+				<span x-text="msg.msgText"></span>
+			</div>
+		</template>
+	</div>
+</div>
+</body>
+</html>
