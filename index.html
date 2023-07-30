@@ -4,6 +4,9 @@
     <meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Equestrian Chat</title>
+		<style>
+			[x-cloak] { display: none !important; }
+		</style>
     <script type="text/javascript" src="https://download.playfab.com/PlayFabClientApi.js"></script>
 		<script type="text/javascript" src="Photon-Javascript_SDK.js"></script>
 		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.12.3/dist/cdn.min.js"></script>
@@ -52,7 +55,7 @@
 			})
 			app = Alpine.store('app')
 			
-			setInterval(scrollToBottom, 250);
+			setInterval(checkScrollToBottom, 250);
 			//addMockMessages();
 			//return;
 			
@@ -61,12 +64,14 @@
 			PlayFabClientSDK.LoginWithCustomID(loginRequest, onPlayFabLoginResult);
 		});
 
-		function scrollToBottom() {
+		function checkScrollToBottom() {
 			// Hacky way to scroll down to show new messages
-			if (!app.autoScroll) {
-				return;
+			if (app.autoScroll) {
+				scrollToBottom();
 			}
-			
+		}
+		
+		function scrollToBottom() {
 			let scroll = document.getElementById("scroll");
 			scroll.scrollTop = scroll.scrollHeight;
 		}
@@ -140,7 +145,7 @@
 		}
 		
 		function addMockMessages() {
-			for (let i = 0; i < 5; i++) {
+			for (let i = 0; i < 200; i++) {
 				let msg = {
 					id: i,
 					channel: "English",
@@ -230,13 +235,20 @@
 			app.channelsToShow.push(channel);
 			chatClient.demoSubscribe();
 		}
+		
+		function onScrollChanged() {
+			let scroll = document.getElementById("scroll");
+			let scrolledToBottom = Math.abs(scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight) < 1;
+			app.autoScroll = scrolledToBottom;
+		}
 		</script>
 </head>
 <body class="bg-zinc-900 text-gray-300">
 <div x-data="$store.app" class="h-screen flex flex-col p-4">
 	<div>
 		<p :class="error ? 'text-red-500' : state == 'Connected!' ? 'text-green-300' : ''" x-text="state"></p>
-		<input type="checkbox" x-model="autoScroll"> Autoscroll</input>
+		<input x-ref="customChannel" class="px-2" type="text" placeholder="Channel Name">
+		<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-0 px-2 rounded" x-on:click="joinChannel($refs.customChannel.value)" :disabled="!isConnected()">Join</button>
 		<br/>
 		<button class="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-0 px-2 rounded" x-on:click="selectAllChannels()">Select All</button>
 		<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-0 px-2 rounded" x-on:click="channelsToShow.length = 0">Select None</button>
@@ -248,12 +260,9 @@
 				</input>
 			</div>
 			</template>
-			<br/>
-			<input x-ref="customChannel" class="px-2" type="text" placeholder="Channel Name">
-			<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-0 px-2 rounded" x-on:click="joinChannel($refs.customChannel.value)" :disabled="!isConnected()">Join</button>
 		</div>
 	</div>
-	<div id="scroll" class="grow overflow-y-scroll border-solid border-2 border-gray-500 mt-4">
+	<div id="scroll" @scroll="onScrollChanged" class="grow overflow-y-scroll border-solid border-2 border-gray-500 mt-4">
 		<template x-for="msg in messages.filter(x => channelsToShow.includes(x.channel))" :key="msg.id">
 			<div class="hover:bg-zinc-700">
 				<span x-text="'[' + msg.channel + ']'"></span>
@@ -263,6 +272,16 @@
 				<span x-text="msg.msgText"></span>
 			</div>
 		</template>
+		<div class="absolute bottom-8 left-1/2 -translate-x-1/2 px-5 py-2 bg-slate-50 rounded-full text-gray-800 z-10 cursor-pointer"
+			x-cloak
+			x-show="!autoScroll"
+			x-transition:enter="transition duration-300"
+			x-transition:enter-start="opacity-0"
+			x-transition:enter-end="opacity-100"
+			x-transition:leave="transition duration-300"
+			x-transition:leave-start="opacity-100"
+			x-transition:leave-end="opacity-0"
+			@click="scrollToBottom()">More messages below</div>
 	</div>
 </div>
 </body>
