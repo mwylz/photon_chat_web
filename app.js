@@ -133,8 +133,8 @@ var ChatDemo = /** @class */ (function (_super) {
     };
     ChatDemo.prototype.demoSubscribe = function () {
         var pc = this.prevChannelsIds;
-        var ids = channels.map(function (x) { return pc[x] || 0; });
-        if (chatClient.subscribe(channels, { historyLength: 100, /*lastIds: ids */ /*, createOptions: { publishSubscribers: true, maxSubscribers: 3} */ })) {
+        var ids = app.channels.map(function (x) { return pc[x] || 0; });
+        if (chatClient.subscribe(app.channels, { historyLength: 100, /*lastIds: ids */ /*, createOptions: { publishSubscribers: true, maxSubscribers: 3} */ })) {
             Output.log("[i]", "subscribing...");
         }
         else {

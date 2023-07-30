@@ -17,21 +17,6 @@
 		let customId = urlParams.get("customId");
 		let photonId = urlParams.get("photonId");
 		let chatVersion = urlParams.get("chatVersion");
-		let channels = [
-			"Arabic",
-			"English",
-			"Chinese",
-			"French",
-			"German",
-			"Spanish",
-			"Japanese",
-			"Indonesian",
-			"Korean",
-			"Italian",
-			"Russian",
-			"Thai",
-			"Ranch Parties",
-		];
 		// ---
 		PlayFab.settings.titleId = titleId;
 		
@@ -41,11 +26,29 @@
 		document.addEventListener('alpine:init', () => {
 			Alpine.store('app', {
 				state: 'Disconnected',
+				isConnected: function() {
+					return this.state == 'Connected!'
+				},
 				error: false,
 				totalMessagesReceived: 0,
 				messages: [],
 				autoScroll: true,
 				channelsToShow: ["English"],
+				channels: [
+					"Arabic",
+					"English",
+					"Chinese",
+					"French",
+					"German",
+					"Spanish",
+					"Japanese",
+					"Indonesian",
+					"Korean",
+					"Italian",
+					"Russian",
+					"Thai",
+					"Ranch Parties",
+				]
 			})
 			app = Alpine.store('app')
 			
@@ -196,7 +199,7 @@
 		
 		function selectAllChannels() {
 			app.channelsToShow.length = 0;
-			channels.forEach(x => app.channelsToShow.push(x));
+			app.channels.forEach(x => app.channelsToShow.push(x));
 		}
 		
 		function totalMessagesInChannel(channel) {
@@ -204,6 +207,27 @@
 				let x = msg.channel == channel ? 1 : 0;
 				return total + x;
 			}, 0);
+		}
+		
+		function joinChannel(channel) {
+			if (channel == undefined || channel == "") {
+				alert("Please enter a channel name");
+				return;
+			}
+			
+			if (app.channels.includes(channel)) {
+				alert("Already subscribed to " + channel);
+				return;
+			}
+			
+			if (!app.isConnected()) {
+				alert("Please connect to the chat before joining rooms");
+				return;
+			}
+			
+			app.channels.push(channel);
+			app.channelsToShow.push(channel);
+			chatClient.demoSubscribe();
 		}
 		</script>
 </head>
@@ -223,6 +247,9 @@
 				</input>
 			</div>
 			</template>
+			<br/>
+			<input x-ref="customChannel" class="px-2" type="text" placeholder="Channel Name">
+			<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-0 px-2 rounded" x-on:click="joinChannel($refs.customChannel.value)" :disabled="!isConnected()">Join</button>
 		</div>
 	</div>
 	<div id="scroll" class="grow overflow-y-scroll border-solid border-2 border-gray-500 mt-4">
