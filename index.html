@@ -129,6 +129,7 @@
 				senderId: msg.sender,
 				senderPlayerId: content.D,
 				msgText: content.msg,
+				isVIP: content.X[0] != "",
 				toString() {
 					return this.channel + ": " + this.senderPlayerId + ": " + this.msgText;
 				}
@@ -257,6 +258,7 @@
 			<div class="hover:bg-zinc-700">
 				<span x-text="'[' + msg.channel + ']'"></span>
 				<span x-text="formatDate(msg.timestampUTC)"></span>
+				<span x-show="msg.isVIP">&#11088;</span>
 				<span x-text="msg.senderPlayerId + ':'" x-on:click="openPlayFabAccount(msg.senderId)" :style="'color: #' + getDefaultPlayerNameColor(msg.senderPlayerId)" class="cursor-pointer"></span>
 				<span x-text="msg.msgText"></span>
 			</div>
