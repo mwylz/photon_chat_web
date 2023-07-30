@@ -247,7 +247,7 @@
 <div x-data="$store.app" class="h-screen flex flex-col p-4">
 	<div>
 		<p :class="error ? 'text-red-500' : state == 'Connected!' ? 'text-green-300' : ''" x-text="state"></p>
-		<input x-ref="customChannel" class="px-2" type="text" placeholder="Channel Name">
+		<input x-ref="customChannel" class="px-2 text-black" type="text" placeholder="Channel Name">
 		<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-0 px-2 rounded" x-on:click="joinChannel($refs.customChannel.value)" :disabled="!isConnected()">Join</button>
 		<br/>
 		<button class="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-0 px-2 rounded" x-on:click="selectAllChannels()">Select All</button>
